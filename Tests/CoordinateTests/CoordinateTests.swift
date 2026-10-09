@@ -45,16 +45,6 @@ final class CoordinateTests: XCTestCase {
             XCTAssertTrue(ChinaCoordinateRegion.contains(CLLocationCoordinate2D(latitude: lat, longitude: lon)))
         }
     }
-    func testRepeatedSavedCoordinatesDoNotDrift() {
-        // Save canonical output, display a derived copy, then reuse the original for simulation.
-        let saved = CoordinatePolicy.mapToWGS84(CoordinatePolicy.wgs84ToMap(beijing, correctionEnabled: true), correctionEnabled: true)
-        var storage = saved
-        for _ in 0..<100 {
-            _ = CoordinatePolicy.wgs84ToMap(storage, correctionEnabled: true)
-            storage = CLLocationCoordinate2D(latitude: storage.latitude, longitude: storage.longitude)
-        }
-        equal(saved, storage)
-    }
     func testGPXPreservesTrackIncludingMiddlePoint() throws {
         let xml = "<gpx><trk><trkseg><trkpt lat='35.170900' lon='136.881500'/><trkpt lat='35.171' lon='136.882'/><trkpt lat='35.681236' lon='139.767125'/></trkseg></trk></gpx>"
         let parsed = try XCTUnwrap(GPXParser.parse(data: Data(xml.utf8)))

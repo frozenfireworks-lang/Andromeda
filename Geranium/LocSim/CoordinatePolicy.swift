@@ -8,12 +8,12 @@ enum CoordinatePolicy {
     static var correctionEnabled: Bool { UserDefaults.standard.bool(forKey: preferenceKey) }
 
     static func mapToWGS84(_ coordinate: CLLocationCoordinate2D,
-                          correctionEnabled: Bool = correctionEnabled) -> CLLocationCoordinate2D {
+                          correctionEnabled: Bool = CoordinatePolicy.correctionEnabled) -> CLLocationCoordinate2D {
         correctionEnabled ? CoordTransform.gcj02ToWgs84(coordinate) : coordinate
     }
 
     static func wgs84ToMap(_ coordinate: CLLocationCoordinate2D,
-                          correctionEnabled: Bool = correctionEnabled) -> CLLocationCoordinate2D {
+                          correctionEnabled: Bool = CoordinatePolicy.correctionEnabled) -> CLLocationCoordinate2D {
         correctionEnabled ? CoordTransform.wgs84ToGcj02(coordinate) : coordinate
     }
 }
