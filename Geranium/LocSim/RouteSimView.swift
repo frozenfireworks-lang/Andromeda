@@ -23,6 +23,7 @@ struct RouteSimSheet: View {
     @State private var routeReady: Bool = false
     @State private var speedMultiplier: Double = 1.0
     @State private var showGPXPicker: Bool = false
+    @State private var importedGPX: [CLLocationCoordinate2D]? = nil
     
     enum ActiveField {
         case none, start, end
@@ -148,15 +149,15 @@ struct RouteSimSheet: View {
                         .padding(.horizontal)
                         
                         // MARK: - Route Selection (shown after calculation)
-                        if routeReady && !routeSimulator.availableRoutes.isEmpty {
+                        if routeReady {
                             VStack(alignment: .leading, spacing: 10) {
                                 HStack {
                                     Image(systemName: "map.fill")
                                         .foregroundColor(.accentColor)
-                                    Text("Select Route")
+                                    Text(importedGPX == nil ? "Select Route" : "GPX Route")
                                         .font(.headline)
                                     Spacer()
-                                    Text("\(routeSimulator.availableRoutes.count) route(s)")
+                                    Text(importedGPX == nil ? "\(routeSimulator.availableRoutes.count) route(s)" : "\(importedGPX?.count ?? 0) points")
                                         .font(.caption)
                                         .foregroundColor(.secondary)
                                 }
@@ -227,7 +228,9 @@ struct RouteSimSheet: View {
                     
                     let coords = result.allCoordinates
                     if coords.count >= 2 {
-                        // Use first and last as start/end
+                        importedGPX = coords
+                        routeReady = false
+                        // Keep the complete WGS-84 track for simulation.
                         startCoord = coords.first
                         endCoord = coords.last
                         startText = "GPX Start"
@@ -237,7 +240,7 @@ struct RouteSimSheet: View {
                         let centerLat = coords.map { $0.latitude }.reduce(0, +) / Double(coords.count)
                         let centerLon = coords.map { $0.longitude }.reduce(0, +) / Double(coords.count)
                         mapRegion = MKCoordinateRegion(
-                            center: CLLocationCoordinate2D(latitude: centerLat, longitude: centerLon),
+                            center: CoordinatePolicy.wgs84ToMap(CLLocationCoordinate2D(latitude: centerLat, longitude: centerLon)),
                             span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
                         )
                         
@@ -571,6 +574,7 @@ struct RouteSimSheet: View {
     }
     
     private func selectLocation(_ item: MKMapItem, field: ActiveField) {
+        importedGPX = nil
         let coord = item.placemark.coordinate
         
         if field == .start {
@@ -588,6 +592,12 @@ struct RouteSimSheet: View {
     }
     
     private func calculateRoute() {
+        if let coords = importedGPX {
+            routeSimulator.loadGPXRoute(coords, mode: selectedMode, speedMult: speedMultiplier)
+            routeReady = true
+            showRouteOnMap()
+            return
+        }
         guard let start = startCoord, let end = endCoord else { return }
         
         routeSimulator.calculateRoutes(from: start, to: end, mode: selectedMode, speedMult: speedMultiplier) { success, error in

@@ -1,6 +1,26 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "China Coordinate Correction" : {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "中国向け座標補正"
+          }
+        }
+      }
+    },
+    "Off for Japan and WGS-84 maps. Enable only for GCJ-02 maps in mainland China. Applies to new map selections and routes; saved locations and GPX stay WGS-84." : {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "日本ではOFFにしてください。中国本土のGCJ-02地図の場合のみONにします。新しい地点・経路に適用され、お気に入りとGPXはWGS-84のままです。"
+          }
+        }
+      }
+    },
     "" : {
       "localizations" : {
         "es" : {

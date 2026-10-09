@@ -9,6 +9,7 @@ import SwiftUI
 import AlertKit
 
 struct SettingsView: View {
+    @AppStorage(CoordinatePolicy.preferenceKey) private var chinaCoordinateCorrection = false
     @State var defaultTab = AppSettings().defaultTab
     @State var DebugStuff: Bool = false
     @State var MinimCal: String = ""
@@ -166,6 +167,10 @@ struct SettingsView: View {
                 
                 // MARK: - LocSim Settings
                 Section(header: Label("LocSim", systemImage: "location.fill.viewfinder"), footer: Text("Configure location simulation settings.")) {
+                    Toggle("China Coordinate Correction", isOn: $chinaCoordinateCorrection)
+                    Text("Off for Japan and WGS-84 maps. Enable only for GCJ-02 maps in mainland China. Applies to new map selections and routes; saved locations and GPX stay WGS-84.")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
                     Toggle(isOn: $appSettings.locSimMultipleAttempts) {
                         Text("Try stopping LocSim multiple times")
                     }

@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		AB0000000000000000000002 /* RouteGeometry.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC0000000000000000000002; };
+		AB0000000000000000000001 /* CoordinatePolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC0000000000000000000001; };
 		AA222222222222220000BEEF /* GeraniumRootHelper in Resources */ = {isa = PBXBuildFile; fileRef = AA111111111111110000CAFE /* GeraniumRootHelper */; };
 		790301C12B377EA70044E30A /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 790301C02B377EA70044E30A /* Localizable.xcstrings */; };
 		790301C52B3794480044E30A /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 790301C42B3794480044E30A /* SettingsView.swift */; };
@@ -119,6 +121,8 @@
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXFileReference section */
+		AC0000000000000000000002 /* RouteGeometry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RouteGeometry.swift; sourceTree = "<group>"; };
+		AC0000000000000000000001 /* CoordinatePolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoordinatePolicy.swift; sourceTree = "<group>"; };
 		790301BA2B37747A0044E30A /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
 		790301BC2B3774F90044E30A /* CoreServices.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreServices.framework; path = System/Library/Frameworks/CoreServices.framework; sourceTree = SDKROOT; };
 		790301C02B377EA70044E30A /* Localizable.xcstrings */ = {isa = PBXFileReference; indentWidth = 2; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; tabWidth = 2; };
@@ -263,6 +267,8 @@
 			isa = PBXGroup;
 			children = (
 				F82C58032E37786D00F76DFA /* CoordTransform.swift */,
+				AC0000000000000000000002 /* RouteGeometry.swift */,
+				AC0000000000000000000001 /* CoordinatePolicy.swift */,
 				7989FD0B2B348A8600FBAB8D /* BookMark */,
 				7989FD052B3486B100FBAB8D /* CustomMapView.swift */,
 				799488A52B347E2C00AFFDCF /* LocSimManager.swift */,
@@ -567,7 +573,6 @@
 				79D7891F2B41BEA600FEBD32 /* Flore.png in Resources */,
 				79D7891D2B41BDE700FEBD32 /* Bouquet.png in Resources */,
 				7956C4542B4DF122004D3A1A /* Beta.png in Resources */,
-				AA111111111111110000BEEF /* GeraniumRootHelper in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -612,6 +617,8 @@
 				790301C72B3794FF0044E30A /* DaemonWelcomeView.swift in Sources */,
 				FAA457232B26654700FC7287 /* Addon.swift in Sources */,
 				F82C58042E37786D00F76DFA /* CoordTransform.swift in Sources */,
+				AB0000000000000000000002 /* RouteGeometry.swift in Sources */,
+				AB0000000000000000000001 /* CoordinatePolicy.swift in Sources */,
 				790301C52B3794480044E30A /* SettingsView.swift in Sources */,
 				79DF26992B31C90C005D81D2 /* WelcomeView.swift in Sources */,
 				7989FD032B347EEA00FBAB8D /* LocSimView.swift in Sources */,

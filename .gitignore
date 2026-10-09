@@ -7,3 +7,7 @@ Geranium.xcodeproj/project.xcworkspace/xcuserdata/cclerc.xcuserdatad/UserInterfa
 build/*
 build/
 *.entitlements
+
+.build/
+.swiftpm/
+RootHelper/.theos/
