@@ -17,7 +17,10 @@ cp "$HELPER" Geranium/GeraniumRootHelper
 chmod +x Geranium/GeraniumRootHelper
 ldid -SRootHelper/entitlements.plist Geranium/GeraniumRootHelper
 xcodebuild -resolvePackageDependencies -project Geranium.xcodeproj -scheme Geranium
-xcodebuild -project Geranium.xcodeproj -scheme Geranium -configuration "$CONFIGURATION"   -derivedDataPath "$ROOT/build/DerivedData" -destination 'generic/platform=iOS'   CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY='' DEVELOPMENT_TEAM=''   ENABLE_DEBUG_DYLIB=NO ONLY_ACTIVE_ARCH=NO build | tee build/xcodebuild.log
+xcodebuild -project Geranium.xcodeproj -scheme Geranium -configuration "$CONFIGURATION" \
+  -derivedDataPath "$ROOT/build/DerivedData" -destination 'generic/platform=iOS' \
+  CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY='' DEVELOPMENT_TEAM='' \
+  ENABLE_DEBUG_DYLIB=NO ONLY_ACTIVE_ARCH=NO build | tee build/xcodebuild.log
 SOURCE_APP="$ROOT/build/DerivedData/Build/Products/$CONFIGURATION-iphoneos/Geranium.app"
 # Restrict cleanup to this script's packaging staging directory.
 rm -rf "$ROOT/build/Payload"

@@ -154,10 +154,10 @@ struct RouteSimSheet: View {
                                 HStack {
                                     Image(systemName: "map.fill")
                                         .foregroundColor(.accentColor)
-                                    Text("Select Route")
+                                    Text(importedGPX == nil ? "Select Route" : "GPX Route")
                                         .font(.headline)
                                     Spacer()
-                                    Text("\(routeSimulator.availableRoutes.count) route(s)")
+                                    Text(importedGPX == nil ? "\(routeSimulator.availableRoutes.count) route(s)" : "\(importedGPX?.count ?? 0) points")
                                         .font(.caption)
                                         .foregroundColor(.secondary)
                                 }
@@ -240,7 +240,7 @@ struct RouteSimSheet: View {
                         let centerLat = coords.map { $0.latitude }.reduce(0, +) / Double(coords.count)
                         let centerLon = coords.map { $0.longitude }.reduce(0, +) / Double(coords.count)
                         mapRegion = MKCoordinateRegion(
-                            center: CLLocationCoordinate2D(latitude: centerLat, longitude: centerLon),
+                            center: CoordinatePolicy.wgs84ToMap(CLLocationCoordinate2D(latitude: centerLat, longitude: centerLon)),
                             span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
                         )
                         
