@@ -89,7 +89,8 @@ class RouteSimulator: NSObject, ObservableObject, CLLocationManagerDelegate {
     @Published var allRoutePolylines: [MKPolyline] = []
     @Published var selectedRouteIndex: Int = 0
     
-    private var routePoints: [CLLocationCoordinate2D] = []
+    private var routePoints: [CLLocationCoordinate2D] = [] // WGS-84 only
+    private var routeCorrectionEnabled = false
     private var timer: Timer? = nil
     private var altitude: Double = 0.0
     private var speedMultiplier: Double = 1.0
@@ -142,6 +143,7 @@ class RouteSimulator: NSObject, ObservableObject, CLLocationManagerDelegate {
     
     func selectRoute(at index: Int) {
         guard index < availableRoutes.count else { return }
+        routeCorrectionEnabled = CoordinatePolicy.correctionEnabled
         selectedRouteIndex = index
         let route = availableRoutes[index].route
         
@@ -150,7 +152,7 @@ class RouteSimulator: NSObject, ObservableObject, CLLocationManagerDelegate {
         route.polyline.getCoordinates(&coords, range: NSRange(location: 0, length: pointCount))
         
         let effectiveSpeed = travelMode.speed * speedMultiplier
-        routePoints = interpolateRoute(coords: coords, speed: effectiveSpeed, interval: updateInterval)
+        routePoints = RouteGeometry.interpolate(coords.map { CoordinatePolicy.mapToWGS84($0, correctionEnabled: routeCorrectionEnabled) }, speed: effectiveSpeed, interval: updateInterval)
         totalPoints = routePoints.count
         routePolyline = route.polyline
         
@@ -161,35 +163,22 @@ class RouteSimulator: NSObject, ObservableObject, CLLocationManagerDelegate {
         estimatedTime = minutes > 60 ? "\(minutes/60)h \(minutes%60)m" : "\(minutes)m \(seconds)s"
     }
     
-    private func interpolateRoute(coords: [CLLocationCoordinate2D], speed: Double, interval: TimeInterval) -> [CLLocationCoordinate2D] {
-        guard coords.count >= 2 else { return coords }
-        let stepDistance = speed * interval
-        var result: [CLLocationCoordinate2D] = [coords[0]]
-        var remainingDistance: Double = 0.0
-        
-        for i in 1..<coords.count {
-            let from = coords[i-1]; let to = coords[i]
-            let segmentDistance = distanceBetween(from, to)
-            guard segmentDistance > 0 else { continue }
-            var coveredInSegment = remainingDistance > 0 ? -remainingDistance : 0.0
-            
-            while coveredInSegment + stepDistance <= segmentDistance {
-                coveredInSegment += stepDistance
-                let fraction = coveredInSegment / segmentDistance
-                let lat = from.latitude + (to.latitude - from.latitude) * fraction
-                let lng = from.longitude + (to.longitude - from.longitude) * fraction
-                result.append(CLLocationCoordinate2D(latitude: lat, longitude: lng))
-            }
-            remainingDistance = segmentDistance - coveredInSegment
-        }
-        if let last = coords.last { result.append(last) }
-        return result
+    /// GPX points are already WGS-84 and must never pass through GCJ-02 decoding.
+    func loadGPXRoute(_ coords: [CLLocationCoordinate2D], mode: TravelMode, speedMult: Double) {
+        guard coords.count >= 2, speedMult.isFinite, speedMult > 0 else { return }
+        routeCorrectionEnabled = CoordinatePolicy.correctionEnabled
+        travelMode = mode
+        speedMultiplier = speedMult
+        routePoints = RouteGeometry.interpolate(coords, speed: mode.speed * speedMult, interval: updateInterval)
+        totalPoints = routePoints.count
+        availableRoutes = []
+        allRoutePolylines = []
+        selectedRouteIndex = 0
+        let mapCoords = coords.map { CoordinatePolicy.wgs84ToMap($0, correctionEnabled: routeCorrectionEnabled) }
+        routePolyline = MKPolyline(coordinates: mapCoords, count: mapCoords.count)
+        estimatedTime = "\(max(0, totalPoints - 1))s"
     }
-    
-    private func distanceBetween(_ c1: CLLocationCoordinate2D, _ c2: CLLocationCoordinate2D) -> Double {
-        return CLLocation(latitude: c1.latitude, longitude: c1.longitude).distance(from: CLLocation(latitude: c2.latitude, longitude: c2.longitude))
-    }
-    
+
     func startSimulation(altitude: Double = 0.0) {
         guard !routePoints.isEmpty else { return }
         self.altitude = altitude
@@ -287,12 +276,11 @@ class RouteSimulator: NSObject, ObservableObject, CLLocationManagerDelegate {
         coord.longitude += lngJitter
         
         DispatchQueue.main.async { [weak self] in
-            self?.currentPosition = coord
+            self?.currentPosition = CoordinatePolicy.wgs84ToMap(coord, correctionEnabled: self?.routeCorrectionEnabled ?? false)
         }
         
-        let wgsCoord = CoordTransform.gcj02ToWgs84(coord)
         let location = CLLocation(
-            coordinate: wgsCoord,
+            coordinate: coord,
             altitude: altitude + Double.random(in: -0.5...0.5), // Slight altitude jitter
             horizontalAccuracy: Double.random(in: 3.0...6.0),   // Varying accuracy
             verticalAccuracy: 5,

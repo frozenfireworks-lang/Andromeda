@@ -87,8 +87,7 @@ struct CoordTransform {
 
     /// Checks if a coordinate is outside of mainland China.
     private static func isOutOfChina(_ coordinate: CLLocationCoordinate2D) -> Bool {
-        return coordinate.longitude < 72.004 || coordinate.longitude > 137.847
-            || coordinate.latitude < 0.8293 || coordinate.latitude > 55.8271
+        !ChinaCoordinateRegion.contains(coordinate)
     }
 
     private static func transformLatitude(x: Double, y: Double) -> Double {

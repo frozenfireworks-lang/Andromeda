@@ -43,6 +43,7 @@ struct CustomMapView: UIViewRepresentable {
     }
 
     func updateUIView(_ uiView: MKMapView, context: Context) {
+        context.coordinator.parent = self
         // Move to region if requested
         if let region = moveToRegion {
             uiView.setRegion(region, animated: true)
@@ -79,8 +80,9 @@ struct CustomMapView: UIViewRepresentable {
             }
         } else if let polyline = routePolyline {
             // Single route
-            let hasExisting = existingOverlays.contains(where: { $0 is MKPolyline })
+            let hasExisting = existingOverlays.contains(where: { $0 === polyline })
             if !hasExisting {
+                uiView.removeOverlays(existingOverlays.filter { $0 is MKPolyline })
                 uiView.addOverlay(polyline, level: .aboveRoads)
                 context.coordinator.currentPolylines = [polyline]
                 context.coordinator.selectedIndex = 0

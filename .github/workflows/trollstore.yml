@@ -1,0 +1,46 @@
+name: TrollStore TIPA
+on:
+  push:
+    branches: ['fix/**']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: macos-14
+    timeout-minutes: 45
+    env:
+      THEOS: ${{ runner.temp }}/theos
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Select Xcode 16.2
+        run: sudo xcode-select -s /Applications/Xcode_16.2.app/Contents/Developer
+      - name: Test production coordinate and GPX code
+        run: |
+          set -o pipefail
+          mkdir -p build
+          swift test 2>&1 | tee build/coordinate-tests.log
+      - name: Install pinned Theos and SDK
+        run: bash scripts/setup-theos.sh
+      - name: Build and validate TIPA
+        run: |
+          set -o pipefail
+          bash ipabuild.sh 2>&1 | tee build/package.log
+      - name: Upload installable TIPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: Andromeda-v2.5.2-japan-gps
+          path: |
+            build/*.tipa
+            build/SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 30
+      - name: Upload diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-diagnostics
+          path: build/*.log
+          retention-days: 30

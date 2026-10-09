@@ -68,8 +68,11 @@ class GPXParser: NSObject, XMLParserDelegate {
         
         switch elementName {
         case "wpt", "trkpt", "rtept":
+            currentLat = nil
+            currentLon = nil
             if let latStr = attributeDict["lat"], let lonStr = attributeDict["lon"],
-               let lat = Double(latStr), let lon = Double(lonStr) {
+               let lat = Double(latStr), let lon = Double(lonStr),
+               CLLocationCoordinate2DIsValid(CLLocationCoordinate2D(latitude: lat, longitude: lon)) {
                 currentLat = lat
                 currentLon = lon
             }
@@ -119,6 +122,7 @@ class GPXParser: NSObject, XMLParserDelegate {
 }
 
 // MARK: - Document Picker for GPX Files
+#if canImport(UIKit)
 import SwiftUI
 import UniformTypeIdentifiers
 
@@ -156,3 +160,5 @@ struct GPXDocumentPicker: UIViewControllerRepresentable {
         }
     }
 }
+
+#endif

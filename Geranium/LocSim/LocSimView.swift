@@ -55,7 +55,7 @@ struct LocSimView: View {
                     .onChange(of: tappedCoordinate) { newCoord in
                         guard let coord = newCoord else { return }
                         let altitudeValue = Double(altitude) ?? 0.0
-                        startSimulation(at: coord.coordinate, altitude: altitudeValue)
+                        startSimulation(at: CoordinatePolicy.mapToWGS84(coord.coordinate), altitude: altitudeValue)
                     }
                     .ignoresSafeArea(.all, edges: [.top, .leading, .trailing])
                 
@@ -219,7 +219,7 @@ struct LocSimView: View {
         .sheet(isPresented: $showFavorites) {
             FavoritesView(isPresented: $showFavorites, currentLat: lat, currentLong: long) { favLat, favLong, name in
                 let coord = CLLocationCoordinate2D(latitude: favLat, longitude: favLong)
-                let region = MKCoordinateRegion(center: coord, span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01))
+                let region = MKCoordinateRegion(center: CoordinatePolicy.wgs84ToMap(coord), span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01))
                 mapRegion = region
                 startSimulation(at: coord, altitude: Double(altitude) ?? 0.0)
                 AlertKitAPI.present(title: "📍 \(name)", icon: .done, style: .iOS17AppleMusic, haptic: .success)
@@ -237,7 +237,7 @@ struct LocSimView: View {
         .sheet(isPresented: $showAppProfiles) {
             AppProfilesView(isPresented: $showAppProfiles, currentLat: lat, currentLong: long) { profLat, profLong, name in
                 let coord = CLLocationCoordinate2D(latitude: profLat, longitude: profLong)
-                let region = MKCoordinateRegion(center: coord, span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01))
+                let region = MKCoordinateRegion(center: CoordinatePolicy.wgs84ToMap(coord), span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01))
                 mapRegion = region
                 startSimulation(at: coord, altitude: Double(altitude) ?? 0.0)
                 AlertKitAPI.present(title: name, icon: .done, style: .iOS17AppleMusic, haptic: .success)
@@ -245,8 +245,8 @@ struct LocSimView: View {
         }
     }
     
-    private func startSimulation(at gcjCoordinate: CLLocationCoordinate2D, altitude: Double) {
-        let wgsCoordinate = CoordTransform.gcj02ToWgs84(gcjCoordinate)
+    private func startSimulation(at wgsCoordinate: CLLocationCoordinate2D, altitude: Double) {
+        // Favorites, profiles and joystick state already use WGS-84.
         
         self.lat = wgsCoordinate.latitude
         self.long = wgsCoordinate.longitude
@@ -298,7 +298,7 @@ struct LocSimView: View {
         mapRegion = region
         
         // Start simulation at the selected location
-        startSimulation(at: coordinate, altitude: altitudeValue)
+        startSimulation(at: CoordinatePolicy.mapToWGS84(coordinate), altitude: altitudeValue)
         
         // Close search UI
         showSearchBar = false
