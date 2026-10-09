@@ -8,7 +8,8 @@ command -v xcodebuild >/dev/null
 CONFIGURATION=Release
 mkdir -p build
 # Always rebuild the pinned RootHelper source; never ship the prebuilt repository binary.
-git submodule update --init --recursive
+if [[ -e .git ]]; then git submodule update --init --recursive; fi
+test -f RootHelper/Makefile
 make -C RootHelper clean
 make -C RootHelper -j2 FINALPACKAGE=1
 HELPER="$ROOT/RootHelper/.theos/obj/GeraniumRootHelper"

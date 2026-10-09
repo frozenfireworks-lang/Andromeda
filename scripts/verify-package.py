@@ -11,7 +11,7 @@ for executable, source in pairs:
     archs = subprocess.check_output(['lipo', '-archs', str(executable)], text=True)
     assert 'arm64' in archs.split(), (executable, archs)
     actual = plistlib.loads(subprocess.check_output(['ldid', '-e', str(executable)]))
-    expected = plistlib.loads(source.read_bytes())
+    expected = plistlib.loads(source.read_bytes(), fmt=plistlib.FMT_XML)
     assert actual == expected, f'Entitlements changed: {executable}'
     print(f'PASS: {executable.name}: arm64, executable, exact entitlements')
 info = plistlib.loads((app / 'Info.plist').read_bytes())
