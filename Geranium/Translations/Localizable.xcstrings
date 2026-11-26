@@ -1,6 +1,106 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "Choose on Map" : {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "地図から選択"
+          }
+        }
+      }
+    },
+    "Use This Point" : {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "この地点を選択"
+          }
+        }
+      }
+    },
+    "Choose Start Point" : {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "出発点を選択"
+          }
+        }
+      }
+    },
+    "Choose Destination" : {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "目的地を選択"
+          }
+        }
+      }
+    },
+    "Selected point" : {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "選択した地点"
+          }
+        }
+      }
+    },
+    "Map start point" : {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "地図で選択した出発点"
+          }
+        }
+      }
+    },
+    "Map destination" : {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "地図で選択した目的地"
+          }
+        }
+      }
+    },
+    "Tap the map to choose a point. This does not change your GPS location." : {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "地図をタップして地点を選択してください。GPSの現在位置は変更されません。"
+          }
+        }
+      }
+    },
+    "Review the route. Your GPS location changes only when you press Start Route Simulation." : {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "経路を確認してください。「ルート移動を開始」を押すまでGPSの現在位置は変更されません。"
+          }
+        }
+      }
+    },
+    "Route unavailable" : {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "経路を取得できませんでした"
+          }
+        }
+      }
+    },
     "China Coordinate Correction" : {
       "localizations": {
         "ja": {

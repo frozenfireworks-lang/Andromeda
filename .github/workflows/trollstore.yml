@@ -1,7 +1,7 @@
 name: TrollStore TIPA
 on:
   push:
-    branches: ['fix/**']
+    branches: ['fix/**', 'feature/**']
   workflow_dispatch:
 permissions:
   contents: read
@@ -21,6 +21,7 @@ jobs:
         run: |
           set -o pipefail
           mkdir -p build
+          python3 scripts/test-navigation-safety.py
           swift test 2>&1 | tee build/coordinate-tests.log
       - name: Install pinned Theos and SDK
         run: bash scripts/setup-theos.sh
