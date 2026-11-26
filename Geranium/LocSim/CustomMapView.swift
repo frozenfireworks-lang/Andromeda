@@ -15,19 +15,22 @@ struct CustomMapView: UIViewRepresentable {
     var allRoutePolylines: [MKPolyline]
     var selectedRouteIndex: Int
     var movingPosition: CLLocationCoordinate2D?
+    var acceptsTaps: Bool
     
     init(tappedCoordinate: Binding<EquatableCoordinate?>,
          moveToRegion: Binding<MKCoordinateRegion?>,
          routePolyline: MKPolyline? = nil,
          allRoutePolylines: [MKPolyline] = [],
          selectedRouteIndex: Int = 0,
-         movingPosition: CLLocationCoordinate2D? = nil) {
+         movingPosition: CLLocationCoordinate2D? = nil,
+         acceptsTaps: Bool = true) {
         self._tappedCoordinate = tappedCoordinate
         self._moveToRegion = moveToRegion
         self.routePolyline = routePolyline
         self.allRoutePolylines = allRoutePolylines
         self.selectedRouteIndex = selectedRouteIndex
         self.movingPosition = movingPosition
+        self.acceptsTaps = acceptsTaps
     }
 
     func makeUIView(context: Context) -> MKMapView {
@@ -59,7 +62,9 @@ struct CustomMapView: UIViewRepresentable {
             // Multiple routes available - show all
             let currentOverlayCount = existingOverlays.filter { $0 is MKPolyline }.count
             
-            if currentOverlayCount != allRoutePolylines.count || context.coordinator.selectedIndex != selectedRouteIndex {
+            if currentOverlayCount != allRoutePolylines.count
+                || context.coordinator.selectedIndex != selectedRouteIndex
+                || !zip(context.coordinator.currentPolylines, allRoutePolylines).allSatisfy({ $0.0 === $0.1 }) {
                 // Remove old polylines
                 uiView.removeOverlays(existingOverlays.filter { $0 is MKPolyline })
                 
@@ -129,6 +134,7 @@ struct CustomMapView: UIViewRepresentable {
         }
 
         @objc func handleTap(_ gesture: UITapGestureRecognizer) {
+            guard parent.acceptsTaps else { return }
             let mapView = gesture.view as! MKMapView
             let touchPoint = gesture.location(in: mapView)
             let coordinate = mapView.convert(touchPoint, toCoordinateFrom: mapView)

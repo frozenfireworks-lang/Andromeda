@@ -31,3 +31,16 @@ enum RouteGeometry {
         return result
     }
 }
+
+
+/// Discards stale asynchronous route responses after an endpoint/mode change or cancellation.
+struct RouteRequestGate {
+    private var current: UUID?
+    mutating func begin() -> UUID {
+        let id = UUID()
+        current = id
+        return id
+    }
+    mutating func invalidate() { current = nil }
+    func accepts(_ id: UUID) -> Bool { current == id }
+}

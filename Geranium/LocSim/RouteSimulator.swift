@@ -91,6 +91,8 @@ class RouteSimulator: NSObject, ObservableObject, CLLocationManagerDelegate {
     
     private var routePoints: [CLLocationCoordinate2D] = [] // WGS-84 only
     private var routeCorrectionEnabled = false
+    private var activeDirections: MKDirections?
+    private var requestGate = RouteRequestGate()
     private var timer: Timer? = nil
     private var altitude: Double = 0.0
     private var speedMultiplier: Double = 1.0
@@ -111,6 +113,9 @@ class RouteSimulator: NSObject, ObservableObject, CLLocationManagerDelegate {
     }
     
     func calculateRoutes(from start: CLLocationCoordinate2D, to end: CLLocationCoordinate2D, mode: TravelMode, speedMult: Double, completion: @escaping (Bool, String?) -> Void) {
+        cancelRouteCalculation()
+        guard !isSimulating, speedMult.isFinite, speedMult > 0 else { return }
+        let requestID = requestGate.begin()
         isCalculatingRoute = true
         travelMode = mode
         speedMultiplier = speedMult
@@ -122,9 +127,12 @@ class RouteSimulator: NSObject, ObservableObject, CLLocationManagerDelegate {
         request.requestsAlternateRoutes = true
         
         let directions = MKDirections(request: request)
+        activeDirections = directions
         directions.calculate { [weak self] response, error in
             DispatchQueue.main.async {
-                self?.isCalculatingRoute = false
+                guard let self = self, self.requestGate.accepts(requestID) else { return }
+                self.activeDirections = nil
+                self.isCalculatingRoute = false
                 if let error = error {
                     completion(false, "Route error: \(error.localizedDescription)")
                     return
@@ -133,16 +141,41 @@ class RouteSimulator: NSObject, ObservableObject, CLLocationManagerDelegate {
                     completion(false, "No route found")
                     return
                 }
-                self?.availableRoutes = routes.enumerated().map { RouteOption(route: $0.element, index: $0.offset) }
-                self?.allRoutePolylines = routes.map { $0.polyline }
-                self?.selectRoute(at: 0)
+                self.availableRoutes = routes.enumerated().map { RouteOption(route: $0.element, index: $0.offset) }
+                self.allRoutePolylines = routes.map { $0.polyline }
+                self.selectRoute(at: 0)
                 completion(true, nil)
             }
         }
     }
     
+    func cancelRouteCalculation() {
+        requestGate.invalidate()
+        activeDirections?.cancel()
+        activeDirections = nil
+        isCalculatingRoute = false
+    }
+
+    /// Clears only planning data. Never changes the currently simulated GPS location.
+    func clearRoutePreview() {
+        cancelRouteCalculation()
+        guard !isSimulating else { return }
+        routePoints = []
+        totalPoints = 0
+        routePolyline = nil
+        allRoutePolylines = []
+        availableRoutes = []
+        estimatedTime = ""
+    }
+
+    func updateSpeedMultiplier(_ multiplier: Double) {
+        guard !isSimulating, multiplier.isFinite, multiplier > 0 else { return }
+        speedMultiplier = multiplier
+        selectRoute(at: selectedRouteIndex)
+    }
+
     func selectRoute(at index: Int) {
-        guard index < availableRoutes.count else { return }
+        guard index >= 0, index < availableRoutes.count else { return }
         routeCorrectionEnabled = CoordinatePolicy.correctionEnabled
         selectedRouteIndex = index
         let route = availableRoutes[index].route
@@ -180,7 +213,7 @@ class RouteSimulator: NSObject, ObservableObject, CLLocationManagerDelegate {
     }
 
     func startSimulation(altitude: Double = 0.0) {
-        guard !routePoints.isEmpty else { return }
+        guard !isSimulating, !isCalculatingRoute, !routePoints.isEmpty else { return }
         self.altitude = altitude
         currentPointIndex = 0
         isSimulating = true
@@ -217,6 +250,7 @@ class RouteSimulator: NSObject, ObservableObject, CLLocationManagerDelegate {
     }
     
     func stopSimulation() {
+        cancelRouteCalculation()
         timer?.invalidate()
         timer = nil
         isSimulating = false

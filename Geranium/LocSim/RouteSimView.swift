@@ -25,8 +25,13 @@ struct RouteSimSheet: View {
     @State private var showGPXPicker: Bool = false
     @State private var importedGPX: [CLLocationCoordinate2D]? = nil
     
-    enum ActiveField {
+    @State private var mapPickingField: ActiveField?
+    @State private var previewRegion: MKCoordinateRegion?
+    @State private var routeError: String?
+
+    enum ActiveField: String, Identifiable {
         case none, start, end
+        var id: String { rawValue }
     }
     
     var body: some View {
@@ -76,7 +81,8 @@ struct RouteSimSheet: View {
                                 ForEach(TravelMode.allCases, id: \.self) { mode in
                                     Button(action: {
                                         selectedMode = mode
-                                        routeReady = false
+                                        invalidateRoute()
+                                        if startCoord != nil && endCoord != nil { calculateRoute() }
                                     }) {
                                         VStack(spacing: 4) {
                                             Image(systemName: mode.icon)
@@ -119,7 +125,11 @@ struct RouteSimSheet: View {
                             Slider(value: $speedMultiplier, in: 0.5...10.0, step: 0.5)
                                 .padding(.horizontal)
                                 .onChange(of: speedMultiplier) { _ in
-                                    routeReady = false
+                                    if routeReady, importedGPX == nil {
+                                        routeSimulator.updateSpeedMultiplier(speedMultiplier)
+                                    } else if startCoord != nil && endCoord != nil {
+                                        calculateRoute()
+                                    }
                                 }
                         }
                         
@@ -163,6 +173,21 @@ struct RouteSimSheet: View {
                                 }
                                 .padding(.horizontal)
                                 
+                                CustomMapView(
+                                    tappedCoordinate: .constant(nil), moveToRegion: $previewRegion,
+                                    routePolyline: routeSimulator.routePolyline,
+                                    allRoutePolylines: routeSimulator.allRoutePolylines,
+                                    selectedRouteIndex: routeSimulator.selectedRouteIndex,
+                                    acceptsTaps: false
+                                )
+                                .frame(height: 240)
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                                .padding(.horizontal)
+                                Text("Review the route. Your GPS location changes only when you press Start Route Simulation.")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                    .padding(.horizontal)
+
                                 ForEach(Array(routeSimulator.availableRoutes.enumerated()), id: \.element.id) { idx, option in
                                     routeOptionCard(option: option, index: idx)
                                 }
@@ -219,6 +244,22 @@ struct RouteSimSheet: View {
                     .disabled(routeSimulator.isSimulating)
                 }
             }
+            .fullScreenCover(item: $mapPickingField) { field in
+                RoutePointPicker(
+                    isStart: field == .start,
+                    initialSelection: field == .start ? startCoord : endCoord,
+                    nearbyCoordinate: field == .start ? endCoord : startCoord
+                ) { coordinate in
+                    selectMapPoint(coordinate, field: field)
+                }
+            }
+            .alert("Route unavailable", isPresented: Binding(
+                get: { routeError != nil }, set: { if !$0 { routeError = nil } }
+            )) {
+                Button("OK", role: .cancel) { routeError = nil }
+            } message: {
+                Text(routeError ?? "")
+            }
             .sheet(isPresented: $showGPXPicker) {
                 GPXDocumentPicker { url in
                     guard let result = GPXParser.parse(url: url), !result.isEmpty else {
@@ -228,8 +269,8 @@ struct RouteSimSheet: View {
                     
                     let coords = result.allCoordinates
                     if coords.count >= 2 {
+                        invalidateRoute()
                         importedGPX = coords
-                        routeReady = false
                         // Keep the complete WGS-84 track for simulation.
                         startCoord = coords.first
                         endCoord = coords.last
@@ -486,6 +527,13 @@ struct RouteSimSheet: View {
             }
             .padding(.horizontal)
             
+            Button {
+                mapPickingField = field
+            } label: {
+                Label("Choose on Map", systemImage: "map")
+            }
+            .padding(.horizontal)
+
             if selectedCoord != nil {
                 HStack {
                     Image(systemName: "mappin")
@@ -574,6 +622,7 @@ struct RouteSimSheet: View {
     }
     
     private func selectLocation(_ item: MKMapItem, field: ActiveField) {
+        invalidateRoute()
         importedGPX = nil
         let coord = item.placemark.coordinate
         
@@ -591,7 +640,31 @@ struct RouteSimSheet: View {
         routeReady = false
     }
     
+    private func invalidateRoute() {
+        routeReady = false
+        routeError = nil
+        routeSimulator.clearRoutePreview()
+    }
+
+    private func selectMapPoint(_ coordinate: CLLocationCoordinate2D, field: ActiveField) {
+        invalidateRoute()
+        importedGPX = nil
+        activeField = .none
+        // Keep MapKit coordinates here. RouteSimulator normalizes the resulting route once.
+        if field == .start {
+            startCoord = coordinate
+            startText = NSLocalizedString("Map start point", comment: "")
+            startResults = []
+        } else {
+            endCoord = coordinate
+            endText = NSLocalizedString("Map destination", comment: "")
+            endResults = []
+        }
+        if startCoord != nil && endCoord != nil { calculateRoute() }
+    }
+
     private func calculateRoute() {
+        invalidateRoute()
         if let coords = importedGPX {
             routeSimulator.loadGPXRoute(coords, mode: selectedMode, speedMult: speedMultiplier)
             routeReady = true
@@ -599,13 +672,17 @@ struct RouteSimSheet: View {
             return
         }
         guard let start = startCoord, let end = endCoord else { return }
+        guard start.latitude != end.latitude || start.longitude != end.longitude else {
+            routeError = NSLocalizedString("Choose two different points.", comment: "")
+            return
+        }
         
         routeSimulator.calculateRoutes(from: start, to: end, mode: selectedMode, speedMult: speedMultiplier) { success, error in
             if success {
                 routeReady = true
                 showRouteOnMap()
             } else {
-                UIApplication.shared.alert(body: error ?? "Failed to calculate route")
+                routeError = error ?? NSLocalizedString("Failed to calculate route", comment: "")
             }
         }
     }
@@ -616,10 +693,12 @@ struct RouteSimSheet: View {
             let rect = selectedPolyline.boundingMapRect
             let region = MKCoordinateRegion(rect.insetBy(dx: -rect.size.width * 0.2, dy: -rect.size.height * 0.2))
             mapRegion = region
+            previewRegion = region
         }
     }
     
     private func startRoute() {
+        guard routeReady, !routeSimulator.isCalculatingRoute else { return }
         routeSimulator.startSimulation(altitude: 0.0)
         
         AlertKitAPI.present(
@@ -628,5 +707,104 @@ struct RouteSimSheet: View {
             style: .iOS17AppleMusic,
             haptic: .success
         )
+    }
+}
+
+
+/// A modal draft editor: no simulation manager or parent GPS binding is available here.
+private struct RoutePointPicker: View {
+    @Environment(\.dismiss) private var dismiss
+    let isStart: Bool
+    let onSelect: (CLLocationCoordinate2D) -> Void
+    @State private var selection: CLLocationCoordinate2D?
+    private let initialCenter: CLLocationCoordinate2D?
+
+    init(isStart: Bool, initialSelection: CLLocationCoordinate2D?,
+         nearbyCoordinate: CLLocationCoordinate2D?, onSelect: @escaping (CLLocationCoordinate2D) -> Void) {
+        self.isStart = isStart
+        self.onSelect = onSelect
+        _selection = State(initialValue: initialSelection)
+        initialCenter = initialSelection ?? nearbyCoordinate ?? CLLocationManager().location?.coordinate
+    }
+
+    var body: some View {
+        NavigationView {
+            RoutePointDraftMap(selection: $selection, initialCenter: initialCenter)
+                .ignoresSafeArea(edges: .bottom)
+                .safeAreaInset(edge: .bottom) {
+                    VStack(spacing: 10) {
+                        Text("Tap the map to choose a point. This does not change your GPS location.")
+                            .font(.subheadline)
+                            .multilineTextAlignment(.center)
+                        if let coordinate = selection {
+                            Text(String(format: "%.6f, %.6f", coordinate.latitude, coordinate.longitude))
+                                .font(.caption.monospacedDigit())
+                        }
+                        Button {
+                            guard let coordinate = selection else { return }
+                            onSelect(coordinate)
+                            dismiss()
+                        } label: {
+                            Text("Use This Point").frame(maxWidth: .infinity).padding(.vertical, 8)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .disabled(selection == nil)
+                    }
+                    .padding()
+                    .background(.regularMaterial)
+                }
+                .navigationTitle(isStart ? "Choose Start Point" : "Choose Destination")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Cancel") { dismiss() }
+                    }
+                }
+        }
+    }
+}
+
+/// Only mutates a draft coordinate. Deliberately has no LocSim or RouteSimulator dependency.
+private struct RoutePointDraftMap: UIViewRepresentable {
+    @Binding var selection: CLLocationCoordinate2D?
+    let initialCenter: CLLocationCoordinate2D?
+
+    func makeUIView(context: Context) -> MKMapView {
+        let map = MKMapView()
+        map.showsUserLocation = true
+        if let center = initialCenter {
+            map.setRegion(MKCoordinateRegion(center: center,
+                span: MKCoordinateSpan(latitudeDelta: 0.025, longitudeDelta: 0.025)), animated: false)
+        }
+        let tap = UITapGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.tap(_:)))
+        tap.cancelsTouchesInView = false
+        map.addGestureRecognizer(tap)
+        return map
+    }
+
+    func updateUIView(_ map: MKMapView, context: Context) {
+        context.coordinator.parent = self
+        if let coordinate = selection {
+            if let pin = context.coordinator.pin {
+                pin.coordinate = coordinate
+            } else {
+                let pin = MKPointAnnotation()
+                pin.coordinate = coordinate
+                pin.title = NSLocalizedString("Selected point", comment: "")
+                context.coordinator.pin = pin
+                map.addAnnotation(pin)
+            }
+        }
+    }
+
+    func makeCoordinator() -> Coordinator { Coordinator(self) }
+    final class Coordinator: NSObject {
+        var parent: RoutePointDraftMap
+        var pin: MKPointAnnotation?
+        init(_ parent: RoutePointDraftMap) { self.parent = parent }
+        @objc func tap(_ gesture: UITapGestureRecognizer) {
+            guard gesture.state == .ended, let map = gesture.view as? MKMapView else { return }
+            parent.selection = map.convert(gesture.location(in: map), toCoordinateFrom: map)
+        }
     }
 }

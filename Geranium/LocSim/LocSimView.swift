@@ -49,11 +49,13 @@ struct LocSimView: View {
             ZStack(alignment: .topTrailing) {
                 // MARK: - Main Map
                 CustomMapView(tappedCoordinate: $tappedCoordinate, moveToRegion: $mapRegion, routePolyline: routeSimulator.routePolyline, allRoutePolylines: routeSimulator.allRoutePolylines, selectedRouteIndex: routeSimulator.selectedRouteIndex, movingPosition: routeSimulator.currentPosition)
+                    .allowsHitTesting(!showRouteSheet)
                     .onAppear {
                         CLLocationManager().requestAlwaysAuthorization()
                     }
                     .onChange(of: tappedCoordinate) { newCoord in
-                        guard let coord = newCoord else { return }
+                        // Navigation owns draft points; never teleport from the background map.
+                        guard !showRouteSheet, let coord = newCoord else { return }
                         let altitudeValue = Double(altitude) ?? 0.0
                         startSimulation(at: CoordinatePolicy.mapToWGS84(coord.coordinate), altitude: altitudeValue)
                     }

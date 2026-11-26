@@ -1,13 +1,13 @@
 name: TrollStore TIPA
 on:
   push:
-    branches: ['fix/**']
+    branches: ['fix/**', 'feature/**']
   workflow_dispatch:
 permissions:
   contents: read
 jobs:
   build:
-    runs-on: macos-14
+    runs-on: macos-15
     timeout-minutes: 45
     env:
       THEOS: ${{ github.workspace }}/.theos-tools
@@ -15,12 +15,13 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
-      - name: Select Xcode 16.2
-        run: sudo xcode-select -s /Applications/Xcode_16.2.app/Contents/Developer
+      - name: Select Xcode 16.4
+        run: sudo xcode-select -s /Applications/Xcode_16.4.app/Contents/Developer
       - name: Test production coordinate and GPX code
         run: |
           set -o pipefail
           mkdir -p build
+          python3 scripts/test-navigation-safety.py
           swift test 2>&1 | tee build/coordinate-tests.log
       - name: Install pinned Theos and SDK
         run: bash scripts/setup-theos.sh

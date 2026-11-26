@@ -88,3 +88,23 @@ final class CoordinateTests: XCTestCase {
         XCTAssertEqual(RouteGeometry.interpolate([nagoya,tokyo],speed:0,interval:1).count,2)
     }
 }
+
+
+final class RouteRequestGateTests: XCTestCase {
+    func testNewEndpointRejectsPreviousResponse() {
+        var gate = RouteRequestGate()
+        let first = gate.begin()
+        let second = gate.begin()
+        XCTAssertFalse(gate.accepts(first))
+        XCTAssertTrue(gate.accepts(second))
+    }
+    func testCancelRejectsResponseAndAllowsFreshRequest() {
+        var gate = RouteRequestGate()
+        let cancelled = gate.begin()
+        gate.invalidate()
+        XCTAssertFalse(gate.accepts(cancelled))
+        let fresh = gate.begin()
+        XCTAssertTrue(gate.accepts(fresh))
+        XCTAssertFalse(gate.accepts(cancelled))
+    }
+}
