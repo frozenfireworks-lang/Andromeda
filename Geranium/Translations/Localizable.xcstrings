@@ -1,6 +1,36 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "Use Current Location" : {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "現在地を取得"
+          }
+        }
+      }
+    },
+    "Current Location" : {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "現在地"
+          }
+        }
+      }
+    },
+    "Unable to get your current location. Check location permission and try again." : {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "現在地を取得できませんでした。位置情報の許可を確認して、もう一度お試しください。"
+          }
+        }
+      }
+    },
     "Choose on Map" : {
       "localizations": {
         "ja": {

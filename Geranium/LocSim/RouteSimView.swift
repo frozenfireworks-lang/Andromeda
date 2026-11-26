@@ -28,6 +28,7 @@ struct RouteSimSheet: View {
     @State private var mapPickingField: ActiveField?
     @State private var previewRegion: MKCoordinateRegion?
     @State private var routeError: String?
+    @StateObject private var currentLocation = RouteCurrentLocation()
 
     enum ActiveField: String, Identifiable {
         case none, start, end
@@ -242,6 +243,18 @@ struct RouteSimSheet: View {
                     }
                     .opacity(routeSimulator.isSimulating ? 0 : 1)
                     .disabled(routeSimulator.isSimulating)
+                }
+            }
+            .onChange(of: currentLocation.result) { result in
+                guard let result = result else { return }
+                currentLocation.result = nil
+                switch result {
+                case .success(let location):
+                    // CLLocation is WGS-84. Convert only the display/map input copy.
+                    selectMapPoint(CoordinatePolicy.wgs84ToMap(location.coordinate), field: .start)
+                    startText = NSLocalizedString("Current Location", comment: "")
+                case .failure:
+                    routeError = NSLocalizedString("Unable to get your current location. Check location permission and try again.", comment: "")
                 }
             }
             .fullScreenCover(item: $mapPickingField) { field in
@@ -534,6 +547,17 @@ struct RouteSimSheet: View {
             }
             .padding(.horizontal)
 
+            if field == .start {
+                Button {
+                    currentLocation.request()
+                } label: {
+                    Label("Use Current Location", systemImage: "location.fill")
+                    if currentLocation.isLoading { ProgressView() }
+                }
+                .disabled(currentLocation.isLoading)
+                .padding(.horizontal)
+            }
+
             if selectedCoord != nil {
                 HStack {
                     Image(systemName: "mappin")
@@ -806,5 +830,71 @@ private struct RoutePointDraftMap: UIViewRepresentable {
             guard gesture.state == .ended, let map = gesture.view as? MKMapView else { return }
             parent.selection = map.convert(gesture.location(in: map), toCoordinateFrom: map)
         }
+    }
+}
+
+
+private enum RouteLocationResult: Equatable {
+    case success(CLLocation)
+    case failure
+    static func == (lhs: Self, rhs: Self) -> Bool {
+        switch (lhs, rhs) {
+        case (.success(let a), .success(let b)): return a === b
+        case (.failure, .failure): return true
+        default: return false
+        }
+    }
+}
+
+/// Reads Core Location only; it never starts or stops location simulation.
+private final class RouteCurrentLocation: NSObject, ObservableObject, CLLocationManagerDelegate {
+    @Published var result: RouteLocationResult?
+    @Published var isLoading = false
+    private let manager = CLLocationManager()
+    private var timeout: DispatchWorkItem?
+
+    override init() {
+        super.init()
+        manager.delegate = self
+        manager.desiredAccuracy = kCLLocationAccuracyBest
+    }
+    func request() {
+        guard !isLoading else { return }
+        result = nil
+        isLoading = true
+        let task = DispatchWorkItem { [weak self] in self?.finish(nil) }
+        timeout = task
+        DispatchQueue.main.asyncAfter(deadline: .now() + 20, execute: task)
+        switch manager.authorizationStatus {
+        case .notDetermined: manager.requestWhenInUseAuthorization()
+        case .authorizedAlways, .authorizedWhenInUse: manager.requestLocation()
+        default: finish(nil)
+        }
+    }
+    func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+        guard isLoading else { return }
+        switch manager.authorizationStatus {
+        case .authorizedAlways, .authorizedWhenInUse: manager.requestLocation()
+        case .denied, .restricted: finish(nil)
+        default: break
+        }
+    }
+    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+        guard isLoading else { return }
+        guard let location = locations.last, location.horizontalAccuracy >= 0,
+              abs(location.timestamp.timeIntervalSinceNow) < 30 else { finish(nil); return }
+        finish(location)
+    }
+    func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
+        guard isLoading else { return }
+        finish(nil)
+    }
+    private func finish(_ location: CLLocation?) {
+        guard isLoading else { return }
+        timeout?.cancel()
+        timeout = nil
+        manager.stopUpdatingLocation()
+        isLoading = false
+        result = location.map(RouteLocationResult.success) ?? .failure
     }
 }
